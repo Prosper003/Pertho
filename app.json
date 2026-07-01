@@ -26,10 +26,11 @@
       ]
     },
     "extra": {
-      "eas": {
-        "projectId": "2fa6517f-7019-4cf7-bc95-9b968128c04c"
-      }
-    },
+  "eas": {
+    "projectId": "2fa6517f-7019-4cf7-bc95-9b968128c04c"
+  }
+},
+"owner": "steeplechasegroups-team"
     "plugins": [
       "expo-media-library"
     ]
