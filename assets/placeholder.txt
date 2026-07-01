@@ -1,0 +1,4 @@
+This folder holds Pertho's image assets.
+- icon.png (app icon)
+- splash.png (splash screen)
+- adaptive-icon.png (Android adaptive icon)
