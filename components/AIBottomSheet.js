@@ -11,7 +11,7 @@ import {
 import BottomSheet, { BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const BACKEND_URL = 'https://your-backend-url.onrender.com';
+const BACKEND_URL = 'https://pertho-backend.onrender.com';
 const DAILY_FREE_LIMIT = 5;
 
 export default function AIBottomSheet({ text, mode, darkMode, onClose }) {
