@@ -1,0 +1,37 @@
+{
+  "expo": {
+    "name": "Pertho",
+    "slug": "pertho",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "automatic",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#1558D6"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#1558D6"
+      },
+      "package": "com.steeplechasegroup.pertho",
+      "permissions": [
+        "READ_EXTERNAL_STORAGE",
+        "WRITE_EXTERNAL_STORAGE",
+        "READ_MEDIA_IMAGES",
+        "READ_MEDIA_VIDEO",
+        "READ_MEDIA_AUDIO"
+      ]
+    },
+    "extra": {
+      "eas": {
+        "projectId": "2fa6517f-7019-4cf7-bc95-9b968128c04c"
+      }
+    },
+    "plugins": [
+      "expo-media-library"
+    ]
+  }
+}
