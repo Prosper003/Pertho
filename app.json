@@ -6,6 +6,7 @@
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "automatic",
+    "owner": "steeplechasegroups-team",
     "splash": {
       "image": "./assets/splash.png",
       "resizeMode": "contain",
@@ -25,14 +26,13 @@
         "READ_MEDIA_AUDIO"
       ]
     },
-    "extra": {
-  "eas": {
-    "projectId": "2fa6517f-7019-4cf7-bc95-9b968128c04c"
-  }
-},
-"owner": "steeplechasegroups-team"
     "plugins": [
       "expo-media-library"
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "2fa6517f-7019-4cf7-bc95-9b968128c04c"
+      }
+    }
   }
 }
