@@ -6,6 +6,7 @@ import {
   StyleSheet,
   Switch,
   StatusBar,
+  ScrollView,
 } from 'react-native';
 
 export default function MenuScreen({ navigation, route }) {
@@ -26,41 +27,57 @@ export default function MenuScreen({ navigation, route }) {
         <Text style={[styles.title, { color: theme.text }]}>Settings</Text>
       </View>
 
-      <View style={[styles.section, { backgroundColor: theme.card }]}>
-        <Text style={[styles.sectionTitle, { color: theme.subtext }]}>APPEARANCE</Text>
-        <View style={styles.row}>
-          <Text style={[styles.rowLabel, { color: theme.text }]}>Dark Mode</Text>
-          <Switch
-            value={darkMode}
-            onValueChange={setDarkMode}
-            trackColor={{ false: '#E0E0E0', true: '#1558D6' }}
-            thumbColor={darkMode ? '#FFFFFF' : '#FFFFFF'}
-          />
+      <ScrollView>
+        <View style={[styles.section, { backgroundColor: theme.card }]}>
+          <Text style={[styles.sectionTitle, { color: theme.subtext }]}>APPEARANCE</Text>
+          <View style={styles.row}>
+            <Text style={[styles.rowLabel, { color: theme.text }]}>Dark Mode</Text>
+            <Switch
+              value={darkMode}
+              onValueChange={(value) => {
+                setDarkMode(value);
+                navigation.goBack();
+              }}
+              trackColor={{ false: '#E0E0E0', true: '#1558D6' }}
+              thumbColor="#FFFFFF"
+            />
+          </View>
         </View>
-      </View>
 
-      <View style={[styles.section, { backgroundColor: theme.card }]}>
-        <Text style={[styles.sectionTitle, { color: theme.subtext }]}>HELP</Text>
-        <TouchableOpacity
-          style={styles.row}
-          onPress={() => navigation.navigate('HowToUse')}
-        >
-          <Text style={[styles.rowLabel, { color: theme.text }]}>How to Use Pertho</Text>
-          <Text style={{ color: '#1558D6' }}>→</Text>
-        </TouchableOpacity>
-      </View>
+        <View style={[styles.section, { backgroundColor: theme.card }]}>
+          <Text style={[styles.sectionTitle, { color: theme.subtext }]}>HOW TO USE</Text>
+          <View style={styles.howToRow}>
+            <Text style={[styles.howToStep, { color: theme.text }]}>1. Pertho scans your phone and lists all PDF files automatically.</Text>
+          </View>
+          <View style={styles.howToRow}>
+            <Text style={[styles.howToStep, { color: theme.text }]}>2. Tap any PDF to open it and read normally.</Text>
+          </View>
+          <View style={styles.howToRow}>
+            <Text style={[styles.howToStep, { color: theme.text }]}>3. While reading, highlight any text you want to understand.</Text>
+          </View>
+          <View style={styles.howToRow}>
+            <Text style={[styles.howToStep, { color: theme.text }]}>4. A menu appears — tap Explain, Key Points, or Quiz Me.</Text>
+          </View>
+          <View style={styles.howToRow}>
+            <Text style={[styles.howToStep, { color: theme.text }]}>5. A panel slides up with your result. Swipe down to close and continue reading.</Text>
+          </View>
+          <View style={styles.howToRow}>
+            <Text style={[styles.howToStep, { color: theme.text }]}>6. You get 5 free AI actions daily. Watch a short ad to unlock more.</Text>
+          </View>
+        </View>
 
-      <View style={[styles.section, { backgroundColor: theme.card }]}>
-        <Text style={[styles.sectionTitle, { color: theme.subtext }]}>ABOUT</Text>
-        <View style={styles.row}>
-          <Text style={[styles.rowLabel, { color: theme.text }]}>Version</Text>
-          <Text style={{ color: theme.subtext }}>1.0.0</Text>
+        <View style={[styles.section, { backgroundColor: theme.card }]}>
+          <Text style={[styles.sectionTitle, { color: theme.subtext }]}>ABOUT</Text>
+          <View style={styles.row}>
+            <Text style={[styles.rowLabel, { color: theme.text }]}>Version</Text>
+            <Text style={{ color: theme.subtext }}>1.0.0</Text>
+          </View>
+          <View style={styles.row}>
+            <Text style={[styles.rowLabel, { color: theme.text }]}>By</Text>
+            <Text style={{ color: theme.subtext }}>Steeplechase Group</Text>
+          </View>
         </View>
-        <View style={styles.row}>
-          <Text style={[styles.rowLabel, { color: theme.text }]}>By</Text>
-          <Text style={{ color: theme.subtext }}>Steeplechase Group</Text>
-        </View>
-      </View>
+      </ScrollView>
     </View>
   );
 }
@@ -99,6 +116,15 @@ const styles = StyleSheet.create({
     borderTopColor: '#F0F0F0',
   },
   rowLabel: { fontSize: 16 },
+  howToRow: {
+    paddingVertical: 10,
+    borderTopWidth: 1,
+    borderTopColor: '#F0F0F0',
+  },
+  howToStep: {
+    fontSize: 14,
+    lineHeight: 22,
+  },
 });
 
 const light = {
