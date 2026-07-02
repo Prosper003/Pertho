@@ -9,8 +9,8 @@ import {
   Alert,
   ActivityIndicator,
 } from 'react-native';
-import * as FileSystem from 'expo-file-system';
-import * as MediaLibrary from 'expo-media-library';
+import * as DocumentPicker from 'expo-document-picker';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function HomeScreen({ navigation }) {
   const [pdfs, setPdfs] = useState([]);
@@ -18,62 +18,69 @@ export default function HomeScreen({ navigation }) {
   const [darkMode, setDarkMode] = useState(false);
 
   useEffect(() => {
-    requestPermissionAndLoadPDFs();
+    loadSavedPDFs();
   }, []);
 
-  async function requestPermissionAndLoadPDFs() {
-    const { status } = await MediaLibrary.requestPermissionsAsync();
-    if (status !== 'granted') {
-      Alert.alert(
-        'Permission Required',
-        'Pertho needs access to your storage to find your PDF files.',
-        [{ text: 'OK' }]
-      );
-      setLoading(false);
-      return;
-    }
-    await scanForPDFs();
-  }
-
-  async function scanForPDFs() {
+  async function loadSavedPDFs() {
     try {
-      const pdfFiles = [];
-      const directoriesToScan = [
-        FileSystem.documentDirectory,
-        '/storage/emulated/0/Download/',
-        '/storage/emulated/0/Documents/',
-        '/storage/emulated/0/DCIM/',
-        '/storage/emulated/0/',
-      ];
-
-      for (const dir of directoriesToScan) {
-        try {
-          const files = await FileSystem.readDirectoryAsync(dir);
-          for (const file of files) {
-            if (file.toLowerCase().endsWith('.pdf')) {
-              const fullPath = dir + file;
-              const info = await FileSystem.getInfoAsync(fullPath);
-              pdfFiles.push({
-                id: fullPath,
-                filename: file,
-                uri: fullPath,
-                size: info.size || 0,
-              });
-            }
-          }
-        } catch (e) {
-          continue;
-        }
+      const saved = await AsyncStorage.getItem('pertho_pdfs');
+      if (saved) {
+        setPdfs(JSON.parse(saved));
       }
-
-      setPdfs(pdfFiles);
-    } catch (error) {
-      Alert.alert('Error', 'Could not scan for PDF files.');
+    } catch (e) {
+      console.log('Error loading PDFs:', e);
     }
     setLoading(false);
   }
 
-  const theme = darkMode ? dark : light;
+  async function browsePDF() {
+    try {
+      const result = await DocumentPicker.getDocumentAsync({
+        type: 'application/pdf',
+        copyToCacheDirectory: true,
+        multiple: false,
+      });
+
+      if (result.canceled) return;
+
+      const file = result.assets[0];
+      const newPDF = {
+        id: file.uri,
+        filename: file.name,
+        uri: file.uri,
+        size: file.size || 0,
+        addedAt: new Date().toISOString(),
+      };
+
+      const existing = pdfs.filter(p => p.id !== newPDF.id);
+      const updated = [newPDF, ...existing];
+      setPdfs(updated);
+      await AsyncStorage.setItem('pertho_pdfs', JSON.stringify(updated));
+
+      navigation.navigate('Reader', { pdf: newPDF, darkMode, setDarkMode });
+    } catch (e) {
+      Alert.alert('Error', 'Could not open file picker.');
+    }
+  }
+
+  async function removePDF(id) {
+    Alert.alert(
+      'Remove PDF',
+      'Remove this PDF from your list?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Remove',
+          style: 'destructive',
+          onPress: async () => {
+            const updated = pdfs.filter(p => p.id !== id);
+            setPdfs(updated);
+            await AsyncStorage.setItem('pertho_pdfs', JSON.stringify(updated));
+          },
+        },
+      ]
+    );
+  }
 
   function formatSize(bytes) {
     if (!bytes) return '';
@@ -82,17 +89,20 @@ export default function HomeScreen({ navigation }) {
     return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
   }
 
+  const theme = darkMode ? dark : light;
+
   function renderPDF({ item }) {
     return (
       <TouchableOpacity
         style={[styles.pdfItem, { backgroundColor: theme.card }]}
         onPress={() => navigation.navigate('Reader', { pdf: item, darkMode, setDarkMode })}
+        onLongPress={() => removePDF(item.id)}
       >
         <View style={styles.pdfIcon}>
           <Text style={styles.pdfIconText}>PDF</Text>
         </View>
         <View style={styles.pdfInfo}>
-          <Text style={[styles.pdfName, { color: theme.text }]} numberOfLines={1}>
+          <Text style={[styles.pdfName, { color: theme.text }]} numberOfLines={2}>
             {item.filename}
           </Text>
           <Text style={[styles.pdfSize, { color: theme.subtext }]}>
@@ -121,8 +131,9 @@ export default function HomeScreen({ navigation }) {
         <ActivityIndicator size="large" color="#1558D6" style={{ marginTop: 40 }} />
       ) : pdfs.length === 0 ? (
         <View style={styles.empty}>
+          <Text style={[styles.emptyTitle, { color: theme.text }]}>No PDFs yet</Text>
           <Text style={[styles.emptyText, { color: theme.subtext }]}>
-            No PDF files found. Download a PDF to your device and it will appear here.
+            Tap the button below to open a PDF from your device.
           </Text>
         </View>
       ) : (
@@ -131,8 +142,13 @@ export default function HomeScreen({ navigation }) {
           keyExtractor={item => item.id}
           renderItem={renderPDF}
           contentContainerStyle={styles.list}
+          numColumns={2}
         />
       )}
+
+      <TouchableOpacity style={styles.browseButton} onPress={browsePDF}>
+        <Text style={styles.browseButtonText}>Open PDF</Text>
+      </TouchableOpacity>
     </View>
   );
 }
@@ -149,26 +165,41 @@ const styles = StyleSheet.create({
   },
   headerTitle: { fontSize: 24, fontWeight: 'bold' },
   hamburger: { fontSize: 24 },
-  list: { paddingHorizontal: 16, paddingTop: 8 },
+  list: { paddingHorizontal: 12, paddingTop: 8, paddingBottom: 100 },
   pdfItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flex: 1,
+    margin: 6,
     padding: 14,
-    borderRadius: 10,
-    marginBottom: 10,
+    borderRadius: 12,
+    alignItems: 'center',
+    minHeight: 120,
+    justifyContent: 'center',
   },
   pdfIcon: {
     backgroundColor: '#1558D6',
-    borderRadius: 6,
-    padding: 8,
-    marginRight: 12,
+    borderRadius: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    marginBottom: 10,
   },
-  pdfIconText: { color: 'white', fontWeight: 'bold', fontSize: 11 },
-  pdfInfo: { flex: 1 },
-  pdfName: { fontSize: 15, fontWeight: '500' },
-  pdfSize: { fontSize: 12, marginTop: 2 },
-  empty: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  emptyText: { fontSize: 16, textAlign: 'center', paddingHorizontal: 40 },
+  pdfIconText: { color: 'white', fontWeight: 'bold', fontSize: 13 },
+  pdfInfo: { alignItems: 'center' },
+  pdfName: { fontSize: 13, fontWeight: '500', textAlign: 'center' },
+  pdfSize: { fontSize: 11, marginTop: 4 },
+  empty: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 40 },
+  emptyTitle: { fontSize: 20, fontWeight: 'bold', marginBottom: 10 },
+  emptyText: { fontSize: 15, textAlign: 'center', lineHeight: 22 },
+  browseButton: {
+    position: 'absolute',
+    bottom: 30,
+    left: 24,
+    right: 24,
+    backgroundColor: '#1558D6',
+    paddingVertical: 16,
+    borderRadius: 30,
+    alignItems: 'center',
+  },
+  browseButtonText: { color: 'white', fontSize: 16, fontWeight: '600' },
 });
 
 const light = {
