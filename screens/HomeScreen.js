@@ -9,8 +9,8 @@ import {
   Alert,
   ActivityIndicator,
 } from 'react-native';
-import * as MediaLibrary from 'expo-media-library';
 import * as FileSystem from 'expo-file-system';
+import * as MediaLibrary from 'expo-media-library';
 
 export default function HomeScreen({ navigation }) {
   const [pdfs, setPdfs] = useState([]);
@@ -32,34 +32,61 @@ export default function HomeScreen({ navigation }) {
       setLoading(false);
       return;
     }
-    loadPDFs();
+    await scanForPDFs();
   }
 
-  async function loadPDFs() {
+  async function scanForPDFs() {
     try {
-      const media = await MediaLibrary.getAssetsAsync({
-        mediaType: 'unknown',
-        first: 200,
-      });
+      const pdfFiles = [];
+      const directoriesToScan = [
+        FileSystem.documentDirectory,
+        '/storage/emulated/0/Download/',
+        '/storage/emulated/0/Documents/',
+        '/storage/emulated/0/DCIM/',
+        '/storage/emulated/0/',
+      ];
 
-      const pdfFiles = media.assets.filter(asset =>
-        asset.filename.toLowerCase().endsWith('.pdf')
-      );
+      for (const dir of directoriesToScan) {
+        try {
+          const files = await FileSystem.readDirectoryAsync(dir);
+          for (const file of files) {
+            if (file.toLowerCase().endsWith('.pdf')) {
+              const fullPath = dir + file;
+              const info = await FileSystem.getInfoAsync(fullPath);
+              pdfFiles.push({
+                id: fullPath,
+                filename: file,
+                uri: fullPath,
+                size: info.size || 0,
+              });
+            }
+          }
+        } catch (e) {
+          continue;
+        }
+      }
 
       setPdfs(pdfFiles);
     } catch (error) {
-      Alert.alert('Error', 'Could not load PDF files.');
+      Alert.alert('Error', 'Could not scan for PDF files.');
     }
     setLoading(false);
   }
 
   const theme = darkMode ? dark : light;
 
+  function formatSize(bytes) {
+    if (!bytes) return '';
+    if (bytes < 1024) return bytes + ' B';
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+    return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+  }
+
   function renderPDF({ item }) {
     return (
       <TouchableOpacity
         style={[styles.pdfItem, { backgroundColor: theme.card }]}
-        onPress={() => navigation.navigate('Reader', { pdf: item, darkMode })}
+        onPress={() => navigation.navigate('Reader', { pdf: item, darkMode, setDarkMode })}
       >
         <View style={styles.pdfIcon}>
           <Text style={styles.pdfIconText}>PDF</Text>
@@ -69,12 +96,9 @@ export default function HomeScreen({ navigation }) {
             {item.filename}
           </Text>
           <Text style={[styles.pdfSize, { color: theme.subtext }]}>
-            {(item.duration / 1024).toFixed(1)} KB
+            {formatSize(item.size)}
           </Text>
         </View>
-        <TouchableOpacity style={styles.threeDots}>
-          <Text style={{ color: theme.subtext, fontSize: 20 }}>⋮</Text>
-        </TouchableOpacity>
       </TouchableOpacity>
     );
   }
@@ -98,7 +122,7 @@ export default function HomeScreen({ navigation }) {
       ) : pdfs.length === 0 ? (
         <View style={styles.empty}>
           <Text style={[styles.emptyText, { color: theme.subtext }]}>
-            No PDF files found on your device.
+            No PDF files found. Download a PDF to your device and it will appear here.
           </Text>
         </View>
       ) : (
@@ -143,7 +167,6 @@ const styles = StyleSheet.create({
   pdfInfo: { flex: 1 },
   pdfName: { fontSize: 15, fontWeight: '500' },
   pdfSize: { fontSize: 12, marginTop: 2 },
-  threeDots: { padding: 8 },
   empty: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   emptyText: { fontSize: 16, textAlign: 'center', paddingHorizontal: 40 },
 });
