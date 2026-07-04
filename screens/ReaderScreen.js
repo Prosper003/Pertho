@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   View,
   Text,
@@ -9,30 +9,73 @@ import {
   Alert,
 } from 'react-native';
 import { WebView } from 'react-native-webview';
+import * as FileSystem from 'expo-file-system';
 import AIBottomSheet from '../components/AIBottomSheet';
 
-const PDFJS_HTML = (pdfUri) => `
+export default function ReaderScreen({ route, navigation }) {
+  const { pdf, darkMode } = route.params;
+  const [loading, setLoading] = useState(true);
+  const [pdfBase64, setPdfBase64] = useState(null);
+  const [bottomSheetVisible, setBottomSheetVisible] = useState(false);
+  const [selectedText, setSelectedText] = useState('');
+  const [aiMode, setAiMode] = useState('');
+  const webviewRef = useRef(null);
+  const theme = darkMode ? dark : light;
+
+  useEffect(() => {
+    loadPDFAsBase64();
+  }, []);
+
+  async function loadPDFAsBase64() {
+    try {
+      const base64 = await FileSystem.readAsStringAsync(pdf.uri, {
+        encoding: FileSystem.EncodingType.Base64,
+      });
+      setPdfBase64(base64);
+    } catch (e) {
+      Alert.alert('Error', 'Could not load this document.');
+      setLoading(false);
+    }
+  }
+
+  const htmlContent = pdfBase64 ? `
 <!DOCTYPE html>
 <html>
 <head>
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=3.0">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
-  body { background: #f5f5f5; font-family: sans-serif; }
-  #container { width: 100%; }
-  canvas { display: block; width: 100% !important; height: auto !important; margin-bottom: 8px; background: white; box-shadow: 0 1px 4px rgba(0,0,0,0.1); }
-  #loading { display: flex; justify-content: center; align-items: center; height: 100vh; font-size: 16px; color: #888; }
+  body { background: #f5f5f5; }
+  #container { width: 100%; padding: 8px; }
+  .page-canvas { 
+    display: block; 
+    width: 100% !important; 
+    height: auto !important; 
+    margin-bottom: 10px; 
+    background: white; 
+    box-shadow: 0 1px 4px rgba(0,0,0,0.12);
+    border-radius: 2px;
+  }
+  #loading { 
+    display: flex; 
+    justify-content: center; 
+    align-items: center; 
+    height: 100vh; 
+    font-size: 15px; 
+    color: #888;
+    font-family: sans-serif;
+  }
   #popup {
     display: none;
     position: fixed;
     background: #1A1A1A;
     border-radius: 8px;
-    padding: 6px 4px;
+    padding: 4px;
     flex-direction: row;
-    gap: 2px;
-    z-index: 1000;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    align-items: center;
+    z-index: 9999;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.35);
   }
   #popup button {
     background: transparent;
@@ -40,13 +83,17 @@ const PDFJS_HTML = (pdfUri) => `
     color: white;
     font-size: 13px;
     font-weight: 600;
-    padding: 6px 10px;
+    padding: 8px 12px;
     border-radius: 6px;
     cursor: pointer;
-    letter-spacing: 0.3px;
+    font-family: sans-serif;
+    letter-spacing: 0.2px;
   }
-  #popup button:hover { background: rgba(255,255,255,0.1); }
-  .divider { width: 1px; background: rgba(255,255,255,0.2); margin: 4px 0; }
+  .divider { 
+    width: 1px; 
+    height: 20px;
+    background: rgba(255,255,255,0.2);
+  }
 </style>
 </head>
 <body>
@@ -67,33 +114,35 @@ const popup = document.getElementById('popup');
 const container = document.getElementById('container');
 let selectedText = '';
 
+const base64Data = '${pdfBase64}';
+const byteCharacters = atob(base64Data);
+const byteNumbers = new Array(byteCharacters.length);
+for (let i = 0; i < byteCharacters.length; i++) {
+  byteNumbers[i] = byteCharacters.charCodeAt(i);
+}
+const byteArray = new Uint8Array(byteNumbers);
+const pdfData = byteArray.buffer;
+
 async function loadPDF() {
   try {
-    const pdf = await pdfjsLib.getDocument('${pdfUri}').promise;
+    const pdf = await pdfjsLib.getDocument({ data: pdfData }).promise;
     document.getElementById('loading').style.display = 'none';
-    
-    for (let i = 1; i <= pdf.numPages; i++) {
-      const page = await pdf.getPage(i);
-      const viewport = page.getViewport({ scale: window.innerWidth / page.getViewport({ scale: 1 }).width });
-      
+
+    for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
+      const page = await pdf.getPage(pageNum);
+      const scale = window.innerWidth / page.getViewport({ scale: 1 }).width;
+      const viewport = page.getViewport({ scale });
+
       const canvas = document.createElement('canvas');
+      canvas.className = 'page-canvas';
       canvas.width = viewport.width;
       canvas.height = viewport.height;
       container.appendChild(canvas);
-      
+
       const ctx = canvas.getContext('2d');
       await page.render({ canvasContext: ctx, viewport }).promise;
-      
-      const textLayer = document.createElement('div');
-      textLayer.style.cssText = 'position:absolute;top:0;left:0;right:0;bottom:0;';
-      
-      const wrapper = document.createElement('div');
-      wrapper.style.cssText = 'position:relative;margin-bottom:8px;';
-      wrapper.appendChild(canvas);
-      container.removeChild(canvas);
-      container.appendChild(wrapper);
     }
-    
+
     window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'loaded' }));
   } catch(e) {
     window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'error', message: e.message }));
@@ -103,15 +152,20 @@ async function loadPDF() {
 document.addEventListener('selectionchange', () => {
   const selection = window.getSelection();
   const text = selection ? selection.toString().trim() : '';
-  
+
   if (text.length > 3) {
     selectedText = text;
-    const range = selection.getRangeAt(0);
-    const rect = range.getBoundingClientRect();
-    
-    popup.style.display = 'flex';
-    popup.style.left = Math.max(4, rect.left) + 'px';
-    popup.style.top = (rect.top - 48 + window.scrollY) + 'px';
+    try {
+      const range = selection.getRangeAt(0);
+      const rect = range.getBoundingClientRect();
+      popup.style.display = 'flex';
+      const popupLeft = Math.min(
+        Math.max(4, rect.left),
+        window.innerWidth - 220
+      );
+      popup.style.left = popupLeft + 'px';
+      popup.style.top = Math.max(10, rect.top - 52 + window.scrollY) + 'px';
+    } catch(e) {}
   } else {
     selectedText = '';
     popup.style.display = 'none';
@@ -143,16 +197,7 @@ loadPDF();
 </script>
 </body>
 </html>
-`;
-
-export default function ReaderScreen({ route, navigation }) {
-  const { pdf, darkMode } = route.params;
-  const [loading, setLoading] = useState(true);
-  const [bottomSheetVisible, setBottomSheetVisible] = useState(false);
-  const [selectedText, setSelectedText] = useState('');
-  const [aiMode, setAiMode] = useState('');
-  const webviewRef = useRef(null);
-  const theme = darkMode ? dark : light;
+` : null;
 
   function handleMessage(event) {
     try {
@@ -165,7 +210,7 @@ export default function ReaderScreen({ route, navigation }) {
         setBottomSheetVisible(true);
       } else if (data.type === 'error') {
         setLoading(false);
-        Alert.alert('Error', 'Could not load this document.');
+        Alert.alert('Error', 'Could not render this document.');
       }
     } catch (e) {}
   }
@@ -186,7 +231,7 @@ export default function ReaderScreen({ route, navigation }) {
         </Text>
       </View>
 
-      {loading && (
+      {(loading || !htmlContent) && (
         <View style={styles.loadingOverlay}>
           <ActivityIndicator size="large" color="#1558D6" />
           <Text style={[styles.loadingText, { color: theme.subtext }]}>
@@ -195,22 +240,24 @@ export default function ReaderScreen({ route, navigation }) {
         </View>
       )}
 
-      <WebView
-        ref={webviewRef}
-        source={{ html: PDFJS_HTML(pdf.uri) }}
-        style={styles.webview}
-        onMessage={handleMessage}
-        javaScriptEnabled={true}
-        domStorageEnabled={true}
-        allowFileAccess={true}
-        allowUniversalAccessFromFileURLs={true}
-        mixedContentMode="always"
-        originWhitelist={['*']}
-        onError={() => {
-          setLoading(false);
-          Alert.alert('Error', 'Could not load this document.');
-        }}
-      />
+      {htmlContent && (
+        <WebView
+          ref={webviewRef}
+          source={{ html: htmlContent }}
+          style={styles.webview}
+          onMessage={handleMessage}
+          javaScriptEnabled={true}
+          domStorageEnabled={true}
+          allowFileAccess={true}
+          allowUniversalAccessFromFileURLs={true}
+          mixedContentMode="always"
+          originWhitelist={['*']}
+          onError={() => {
+            setLoading(false);
+            Alert.alert('Error', 'Could not load this document.');
+          }}
+        />
+      )}
 
       {bottomSheetVisible && (
         <AIBottomSheet
@@ -238,12 +285,9 @@ const styles = StyleSheet.create({
   title: { flex: 1, fontSize: 15, fontWeight: '500' },
   webview: { flex: 1 },
   loadingOverlay: {
-    position: 'absolute',
-    top: 100,
-    left: 0,
-    right: 0,
+    flex: 1,
+    justifyContent: 'center',
     alignItems: 'center',
-    zIndex: 10,
   },
   loadingText: { marginTop: 12, fontSize: 14 },
 });
