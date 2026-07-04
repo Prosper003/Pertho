@@ -72,16 +72,19 @@ export default function MenuScreen({ navigation, route }) {
           </View>
         </View>
 
-        <View style={[styles.section, { backgroundColor: theme.card }]}>
+       <View style={[styles.section, { backgroundColor: theme.card }]}>
           <Text style={[styles.sectionTitle, { color: theme.subtext }]}>ABOUT</Text>
           <View style={styles.row}>
             <Text style={[styles.rowLabel, { color: theme.text }]}>Version</Text>
             <Text style={{ color: theme.subtext }}>1.0.0</Text>
           </View>
-          <View style={styles.row}>
-            <Text style={[styles.rowLabel, { color: theme.text }]}>Developer</Text>
-            <Text style={{ color: theme.subtext }}>Steeplechase Group</Text>
-          </View>
+          <TouchableOpacity
+            style={styles.row}
+            onPress={() => navigation.navigate('About', { darkMode })}
+          >
+            <Text style={[styles.rowLabel, { color: theme.text }]}>Steeplechase Group</Text>
+            <Text style={{ color: '#1558D6' }}>→</Text>
+          </TouchableOpacity>
         </View>
       </ScrollView>
     </View>
