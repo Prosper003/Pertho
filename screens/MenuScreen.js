@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -8,10 +8,17 @@ import {
   StatusBar,
   ScrollView,
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function MenuScreen({ navigation, route }) {
-  const { darkMode, setDarkMode } = route.params;
+  const { darkMode: initialDarkMode } = route.params;
+  const [darkMode, setDarkModeState] = useState(initialDarkMode);
   const theme = darkMode ? dark : light;
+
+  async function toggleDarkMode(value) {
+    setDarkModeState(value);
+    await AsyncStorage.setItem('pertho_darkmode', JSON.stringify(value));
+  }
 
   return (
     <View style={[styles.container, { backgroundColor: theme.bg }]}>
@@ -22,7 +29,7 @@ export default function MenuScreen({ navigation, route }) {
 
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Text style={[styles.back, { color: '#1558D6' }]}>← Back</Text>
+          <Text style={[styles.back, { color: '#1558D6' }]}>Back</Text>
         </TouchableOpacity>
         <Text style={[styles.title, { color: theme.text }]}>Settings</Text>
       </View>
@@ -34,10 +41,7 @@ export default function MenuScreen({ navigation, route }) {
             <Text style={[styles.rowLabel, { color: theme.text }]}>Dark Mode</Text>
             <Switch
               value={darkMode}
-              onValueChange={(value) => {
-                setDarkMode(value);
-                navigation.goBack();
-              }}
+              onValueChange={toggleDarkMode}
               trackColor={{ false: '#E0E0E0', true: '#1558D6' }}
               thumbColor="#FFFFFF"
             />
@@ -47,22 +51,24 @@ export default function MenuScreen({ navigation, route }) {
         <View style={[styles.section, { backgroundColor: theme.card }]}>
           <Text style={[styles.sectionTitle, { color: theme.subtext }]}>HOW TO USE</Text>
           <View style={styles.howToRow}>
-            <Text style={[styles.howToStep, { color: theme.text }]}>1. Pertho scans your phone and lists all PDF files automatically.</Text>
+            <Text style={[styles.step, { color: theme.subtext }]}>01</Text>
+            <Text style={[styles.howToText, { color: theme.text }]}>Open a document from your device using the button on the home screen.</Text>
           </View>
           <View style={styles.howToRow}>
-            <Text style={[styles.howToStep, { color: theme.text }]}>2. Tap any PDF to open it and read normally.</Text>
+            <Text style={[styles.step, { color: theme.subtext }]}>02</Text>
+            <Text style={[styles.howToText, { color: theme.text }]}>Read normally. Scroll, zoom, and navigate pages as usual.</Text>
           </View>
           <View style={styles.howToRow}>
-            <Text style={[styles.howToStep, { color: theme.text }]}>3. While reading, highlight any text you want to understand.</Text>
+            <Text style={[styles.step, { color: theme.subtext }]}>03</Text>
+            <Text style={[styles.howToText, { color: theme.text }]}>Long press any text to select it. Tap Explain, Key Points, or Quiz Me.</Text>
           </View>
           <View style={styles.howToRow}>
-            <Text style={[styles.howToStep, { color: theme.text }]}>4. A menu appears — tap Explain, Key Points, or Quiz Me.</Text>
+            <Text style={[styles.step, { color: theme.subtext }]}>04</Text>
+            <Text style={[styles.howToText, { color: theme.text }]}>A panel slides up with your result. Dismiss it to continue reading.</Text>
           </View>
           <View style={styles.howToRow}>
-            <Text style={[styles.howToStep, { color: theme.text }]}>5. A panel slides up with your result. Swipe down to close and continue reading.</Text>
-          </View>
-          <View style={styles.howToRow}>
-            <Text style={[styles.howToStep, { color: theme.text }]}>6. You get 5 free AI actions daily. Watch a short ad to unlock more.</Text>
+            <Text style={[styles.step, { color: theme.subtext }]}>05</Text>
+            <Text style={[styles.howToText, { color: theme.text }]}>You have 5 free AI actions per day. Watch an ad to unlock more.</Text>
           </View>
         </View>
 
@@ -73,7 +79,7 @@ export default function MenuScreen({ navigation, route }) {
             <Text style={{ color: theme.subtext }}>1.0.0</Text>
           </View>
           <View style={styles.row}>
-            <Text style={[styles.rowLabel, { color: theme.text }]}>By</Text>
+            <Text style={[styles.rowLabel, { color: theme.text }]}>Developer</Text>
             <Text style={{ color: theme.subtext }}>Steeplechase Group</Text>
           </View>
         </View>
@@ -87,7 +93,7 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 16,
+    paddingHorizontal: 20,
     paddingTop: 50,
     paddingBottom: 20,
     gap: 16,
@@ -103,9 +109,9 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: 11,
-    fontWeight: '600',
-    letterSpacing: 1,
-    paddingVertical: 10,
+    fontWeight: '700',
+    letterSpacing: 1.2,
+    paddingVertical: 12,
   },
   row: {
     flexDirection: 'row',
@@ -117,14 +123,15 @@ const styles = StyleSheet.create({
   },
   rowLabel: { fontSize: 16 },
   howToRow: {
-    paddingVertical: 10,
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    paddingVertical: 12,
     borderTopWidth: 1,
     borderTopColor: '#F0F0F0',
+    gap: 14,
   },
-  howToStep: {
-    fontSize: 14,
-    lineHeight: 22,
-  },
+  step: { fontSize: 12, fontWeight: '700', marginTop: 2, width: 20 },
+  howToText: { flex: 1, fontSize: 14, lineHeight: 22 },
 });
 
 const light = {
