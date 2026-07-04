@@ -18,25 +18,31 @@ export default function HomeScreen({ navigation }) {
   const [darkMode, setDarkMode] = useState(false);
 
   useEffect(() => {
-    loadSavedPDFs();
+    loadSettings();
   }, []);
 
-  async function loadSavedPDFs() {
+  useEffect(() => {
+    const unsubscribe = navigation.addListener('focus', () => {
+      loadSettings();
+    });
+    return unsubscribe;
+  }, [navigation]);
+
+  async function loadSettings() {
     try {
+      const savedDark = await AsyncStorage.getItem('pertho_darkmode');
+      if (savedDark !== null) setDarkMode(JSON.parse(savedDark));
       const saved = await AsyncStorage.getItem('pertho_pdfs');
-      if (saved) {
-        setPdfs(JSON.parse(saved));
-      }
-    } catch (e) {
-      console.log('Error loading PDFs:', e);
-    }
+      if (saved) setPdfs(JSON.parse(saved));
+    } catch (e) {}
     setLoading(false);
   }
 
   async function browsePDF() {
     try {
       const result = await DocumentPicker.getDocumentAsync({
-        type: 'application/pdf',
+        type: ['application/pdf', 'application/msword',
+          'application/vnd.openxmlformats-officedocument.wordprocessingml.document'],
         copyToCacheDirectory: true,
         multiple: false,
       });
@@ -44,69 +50,87 @@ export default function HomeScreen({ navigation }) {
       if (result.canceled) return;
 
       const file = result.assets[0];
-      const newPDF = {
+      const newFile = {
         id: file.uri,
         filename: file.name,
         uri: file.uri,
         size: file.size || 0,
+        mimeType: file.mimeType || '',
         addedAt: new Date().toISOString(),
       };
 
-      const existing = pdfs.filter(p => p.id !== newPDF.id);
-      const updated = [newPDF, ...existing];
+      const existing = pdfs.filter(p => p.id !== newFile.id);
+      const updated = [newFile, ...existing];
       setPdfs(updated);
       await AsyncStorage.setItem('pertho_pdfs', JSON.stringify(updated));
-
-      navigation.navigate('Reader', { pdf: newPDF, darkMode, setDarkMode });
+      navigation.navigate('Reader', { pdf: newFile, darkMode });
     } catch (e) {
       Alert.alert('Error', 'Could not open file picker.');
     }
   }
 
-  async function removePDF(id) {
-    Alert.alert(
-      'Remove PDF',
-      'Remove this PDF from your list?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Remove',
-          style: 'destructive',
-          onPress: async () => {
-            const updated = pdfs.filter(p => p.id !== id);
-            setPdfs(updated);
-            await AsyncStorage.setItem('pertho_pdfs', JSON.stringify(updated));
-          },
+  async function removeFile(id) {
+    Alert.alert('Remove', 'Remove this file from your list?', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Remove',
+        style: 'destructive',
+        onPress: async () => {
+          const updated = pdfs.filter(p => p.id !== id);
+          setPdfs(updated);
+          await AsyncStorage.setItem('pertho_pdfs', JSON.stringify(updated));
         },
-      ]
-    );
+      },
+    ]);
+  }
+
+  function getFileType(file) {
+    const name = file.filename.toLowerCase();
+    const mime = file.mimeType || '';
+    if (name.endsWith('.pdf') || mime.includes('pdf')) return 'PDF';
+    if (name.endsWith('.docx') || mime.includes('wordprocessingml')) return 'DOCX';
+    if (name.endsWith('.doc') || mime.includes('msword')) return 'DOC';
+    return 'FILE';
+  }
+
+  function getFileTypeColor(type) {
+    if (type === 'PDF') return '#1558D6';
+    if (type === 'DOCX' || type === 'DOC') return '#2B579A';
+    return '#555';
   }
 
   function formatSize(bytes) {
     if (!bytes) return '';
-    if (bytes < 1024) return bytes + ' B';
     if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
     return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
   }
 
+  function formatDate(iso) {
+    if (!iso) return '';
+    const d = new Date(iso);
+    return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+  }
+
   const theme = darkMode ? dark : light;
 
-  function renderPDF({ item }) {
+  function renderFile({ item }) {
+    const type = getFileType(item);
+    const color = getFileTypeColor(type);
     return (
       <TouchableOpacity
-        style={[styles.pdfItem, { backgroundColor: theme.card }]}
-        onPress={() => navigation.navigate('Reader', { pdf: item, darkMode, setDarkMode })}
-        onLongPress={() => removePDF(item.id)}
+        style={[styles.fileItem, { backgroundColor: theme.card }]}
+        onPress={() => navigation.navigate('Reader', { pdf: item, darkMode })}
+        onLongPress={() => removeFile(item.id)}
       >
-        <View style={styles.pdfIcon}>
-          <Text style={styles.pdfIconText}>PDF</Text>
+        <View style={[styles.fileTag, { backgroundColor: color }]}>
+          <Text style={styles.fileTagText}>{type}</Text>
         </View>
-        <View style={styles.pdfInfo}>
-          <Text style={[styles.pdfName, { color: theme.text }]} numberOfLines={2}>
+        <View style={styles.fileInfo}>
+          <Text style={[styles.fileName, { color: theme.text }]} numberOfLines={1}>
             {item.filename}
           </Text>
-          <Text style={[styles.pdfSize, { color: theme.subtext }]}>
-            {formatSize(item.size)}
+          <Text style={[styles.fileMeta, { color: theme.subtext }]}>
+            {formatSize(item.size)}  ·  {formatDate(item.addedAt)}
           </Text>
         </View>
       </TouchableOpacity>
@@ -119,10 +143,9 @@ export default function HomeScreen({ navigation }) {
         barStyle={darkMode ? 'light-content' : 'dark-content'}
         backgroundColor={theme.bg}
       />
-
       <View style={styles.header}>
         <Text style={[styles.headerTitle, { color: theme.text }]}>Pertho</Text>
-        <TouchableOpacity onPress={() => navigation.navigate('Menu', { darkMode, setDarkMode })}>
+        <TouchableOpacity onPress={() => navigation.navigate('Menu', { darkMode })}>
           <Text style={[styles.hamburger, { color: theme.text }]}>☰</Text>
         </TouchableOpacity>
       </View>
@@ -131,23 +154,22 @@ export default function HomeScreen({ navigation }) {
         <ActivityIndicator size="large" color="#1558D6" style={{ marginTop: 40 }} />
       ) : pdfs.length === 0 ? (
         <View style={styles.empty}>
-          <Text style={[styles.emptyTitle, { color: theme.text }]}>No PDFs yet</Text>
+          <Text style={[styles.emptyTitle, { color: theme.text }]}>No files yet</Text>
           <Text style={[styles.emptyText, { color: theme.subtext }]}>
-            Tap the button below to open a PDF from your device.
+            Tap the button below to open a document from your device.
           </Text>
         </View>
       ) : (
         <FlatList
           data={pdfs}
           keyExtractor={item => item.id}
-          renderItem={renderPDF}
+          renderItem={renderFile}
           contentContainerStyle={styles.list}
-          numColumns={2}
         />
       )}
 
-      <TouchableOpacity style={styles.browseButton} onPress={browsePDF}>
-        <Text style={styles.browseButtonText}>Open PDF</Text>
+      <TouchableOpacity style={styles.openButton} onPress={browsePDF}>
+        <Text style={styles.openButtonText}>Open Document</Text>
       </TouchableOpacity>
     </View>
   );
@@ -165,31 +187,28 @@ const styles = StyleSheet.create({
   },
   headerTitle: { fontSize: 24, fontWeight: 'bold' },
   hamburger: { fontSize: 24 },
-  list: { paddingHorizontal: 12, paddingTop: 8, paddingBottom: 100 },
-  pdfItem: {
-    flex: 1,
-    margin: 6,
-    padding: 14,
-    borderRadius: 12,
+  list: { paddingHorizontal: 16, paddingTop: 8, paddingBottom: 100 },
+  fileItem: {
+    flexDirection: 'row',
     alignItems: 'center',
-    minHeight: 120,
-    justifyContent: 'center',
-  },
-  pdfIcon: {
-    backgroundColor: '#1558D6',
-    borderRadius: 8,
-    paddingVertical: 10,
-    paddingHorizontal: 14,
+    padding: 14,
+    borderRadius: 10,
     marginBottom: 10,
   },
-  pdfIconText: { color: 'white', fontWeight: 'bold', fontSize: 13 },
-  pdfInfo: { alignItems: 'center' },
-  pdfName: { fontSize: 13, fontWeight: '500', textAlign: 'center' },
-  pdfSize: { fontSize: 11, marginTop: 4 },
+  fileTag: {
+    borderRadius: 6,
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    marginRight: 14,
+  },
+  fileTagText: { color: 'white', fontWeight: '700', fontSize: 11, letterSpacing: 0.5 },
+  fileInfo: { flex: 1 },
+  fileName: { fontSize: 15, fontWeight: '500' },
+  fileMeta: { fontSize: 12, marginTop: 3 },
   empty: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 40 },
   emptyTitle: { fontSize: 20, fontWeight: 'bold', marginBottom: 10 },
   emptyText: { fontSize: 15, textAlign: 'center', lineHeight: 22 },
-  browseButton: {
+  openButton: {
     position: 'absolute',
     bottom: 30,
     left: 24,
@@ -199,7 +218,7 @@ const styles = StyleSheet.create({
     borderRadius: 30,
     alignItems: 'center',
   },
-  browseButtonText: { color: 'white', fontSize: 16, fontWeight: '600' },
+  openButtonText: { color: 'white', fontSize: 16, fontWeight: '600' },
 });
 
 const light = {
