@@ -29,7 +29,7 @@ export default function MenuScreen({ navigation, route }) {
 
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Text style={[styles.back, { color: '#1558D6' }]}>Back</Text>
+          <Text style={[styles.back, { color: '#FF6B2C' }]}>Back</Text>
         </TouchableOpacity>
         <Text style={[styles.title, { color: theme.text }]}>Settings</Text>
       </View>
