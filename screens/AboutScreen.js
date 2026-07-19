@@ -75,7 +75,7 @@ export default function AboutScreen({ navigation, route }) {
               <Text style={[styles.founderName, { color: theme.text }]}>
                 {founder.name}
               </Text>
-              <Text style={[styles.founderRole, { color: '#1558D6' }]}>
+              <Text style={[styles.founderRole, { color: '#FF6B2C' }]}>
                 {founder.role}
               </Text>
               <Text style={[styles.founderFocus, { color: theme.subtext }]}>
@@ -111,7 +111,7 @@ const styles = StyleSheet.create({
     paddingBottom: 16,
     gap: 16,
   },
-  back: { fontSize: 16, fontWeight: '600', color: '#1558D6' },
+  back: { fontSize: 16, fontWeight: '600', color: '#FF6B2C' },
   title: { fontSize: 22, fontWeight: 'bold' },
   content: { padding: 16, paddingBottom: 40 },
   card: {
@@ -141,7 +141,7 @@ const styles = StyleSheet.create({
     width: 46,
     height: 46,
     borderRadius: 23,
-    backgroundColor: '#1558D6',
+    backgroundColor: '#FF6B2C',
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -151,7 +151,7 @@ const styles = StyleSheet.create({
   founderRole: { fontSize: 13, fontWeight: '600', marginBottom: 2 },
   founderFocus: { fontSize: 12 },
   websiteLabel: { fontSize: 11, fontWeight: '700', letterSpacing: 1, marginBottom: 8 },
-  websiteLink: { fontSize: 16, color: '#1558D6', fontWeight: '500' },
+  websiteLink: { fontSize: 16, color: '#FF6B2C', fontWeight: '500' },
   footer: { textAlign: 'center', fontSize: 13, marginTop: 8 },
 });
 
