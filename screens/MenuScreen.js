@@ -42,7 +42,7 @@ export default function MenuScreen({ navigation, route }) {
             <Switch
               value={darkMode}
               onValueChange={toggleDarkMode}
-              trackColor={{ false: '#E0E0E0', true: '#1558D6' }}
+              trackColor={{ false: '#E0E0E0', true: '#FF6B2C' }}
               thumbColor="#FFFFFF"
             />
           </View>
@@ -83,7 +83,7 @@ export default function MenuScreen({ navigation, route }) {
             onPress={() => navigation.navigate('About', { darkMode })}
           >
             <Text style={[styles.rowLabel, { color: theme.text }]}>Steeplechase Group</Text>
-            <Text style={{ color: '#1558D6' }}>→</Text>
+            <Text style={{ color: '#FF6B2C' }}>→</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>
