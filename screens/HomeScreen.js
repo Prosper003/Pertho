@@ -143,7 +143,7 @@ export default function HomeScreen({ navigation }) {
 
       <View style={[styles.header, { borderBottomColor: theme.border }]}>
         <Image
-          source={require('../assets/logo.png')}
+         source={darkMode ? require('../assets/logo-dark.png') : require('../assets/logo-light.png')}
           style={styles.logo}
           resizeMode="contain"
         />
